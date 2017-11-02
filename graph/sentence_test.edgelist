@@ -1,0 +1,10 @@
+0 3 {'key': 'parse_0_3', 'label': u'nsubj'}
+1 3 {'key': 'parse_1_3', 'label': u'aux'}
+2 3 {'key': 'parse_2_3', 'label': u'advmod'}
+3 5 {'key': 'parse_5_3', 'label': u'obl'}
+3 8 {'key': 'parse_8_3', 'label': u'advcl'}
+4 5 {'key': 'parse_4_5', 'label': u'case'}
+6 8 {'key': 'parse_6_8', 'label': u'mark'}
+7 8 {'key': 'parse_7_8', 'label': u'nsubj'}
+8 10 {'key': 'parse_10_8', 'label': u'obl'}
+9 10 {'key': 'parse_9_10', 'label': u'case'}
