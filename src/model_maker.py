@@ -9,18 +9,21 @@ Aditya Grover and Jure Leskovec
 Knowledge Discovery and Data Mining (KDD), 2016
 '''
 
+import argparse
 import numpy as np
 import networkx as nx
 import node2vec
 from gensim.models import Word2Vec
-
 
 def read_graph(args):
 	'''
 	Reads the input network in networkx.
 	'''
 	if args.graph:
-		G = nx.read_edgelist(nx.generate_edgelist(args.graph, data=True), nodetype=int, create_using=nx.DiGraph())
+		G1 = nx.read_edgelist(nx.generate_edgelist(args.graph, data=True), nodetype=int, create_using=nx.DiGraph())
+		G = args.graph
+		#print G.nodes(), G1.nodes()
+		print G.edges(), G1.edges()
 		for edge in G.edges():
 			G[edge[0]][edge[1]]['weight'] = 1
 		return G
@@ -53,6 +56,6 @@ def model_maker(args):
 	nx_G = read_graph(args)
 	G = node2vec.Graph(nx_G, args.directed, args.p, args.q)
 	G.preprocess_transition_probs()
-	walks = G.simulate_walks(args.num_walks, args.walk_length)
+	walks = G.simulate_walks(args.num_walks, args.walk_length, args.meta_paths)
 	model = learn_embeddings(walks, args)
 	return model

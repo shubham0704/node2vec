@@ -10,7 +10,7 @@ class Graph():
 		self.p = p
 		self.q = q
 
-	def node2vec_walk(self, walk_length, start_node):
+	def node2vec_walk(self, walk_length, start_node, meta_path):
 		'''
 		Simulate a random walk starting from start node.
 		'''
@@ -20,23 +20,28 @@ class Graph():
 
 		walk = [start_node]
 
-		while len(walk) < walk_length:
-			cur = walk[-1]
-			cur_nbrs = sorted(G.neighbors(cur))
-			if len(cur_nbrs) > 0:
-				if len(walk) == 1:
-					walk.append(cur_nbrs[alias_draw(alias_nodes[cur][0], alias_nodes[cur][1])])
+		for path_ele in meta_path[1:]:
+			if len(walk) < walk_length:
+				cur = walk[-1]
+				cur_nbrs = sorted(G.neighbors(cur))
+				next_probable_nbrs = self.get_path_elements(cur_nbrs, path_ele)
+				
+				if len(cur_nbrs) > 0:
+					if len(walk) == 1:
+						walk.append(cur_nbrs[alias_draw(alias_nodes[cur][0], alias_nodes[cur][1], next_probable_nbrs)])
+					else:
+						prev = walk[-2]
+						next = cur_nbrs[alias_draw(alias_edges[(prev, cur)][0], 
+							alias_edges[(prev, cur)][1], next_probable_nbrs)]
+						walk.append(next)
 				else:
-					prev = walk[-2]
-					next = cur_nbrs[alias_draw(alias_edges[(prev, cur)][0], 
-						alias_edges[(prev, cur)][1])]
-					walk.append(next)
+					break
 			else:
 				break
 
 		return walk
 
-	def simulate_walks(self, num_walks, walk_length):
+	def simulate_walks(self, num_walks, walk_length, meta_paths):
 		'''
 		Repeatedly simulate random walks from each node.
 		'''
@@ -47,8 +52,10 @@ class Graph():
 		for walk_iter in range(num_walks):
 			print str(walk_iter+1), '/', str(num_walks)
 			random.shuffle(nodes)
-			for node in nodes:
-				walks.append(self.node2vec_walk(walk_length=walk_length, start_node=node))
+			for meta_path in meta_paths:
+				for node in nodes:
+					# if node == meta_path[0]:
+					walks.append(self.node2vec_walk(walk_length=walk_length, start_node=node, meta_path=meta_path))
 
 		return walks
 
@@ -61,6 +68,7 @@ class Graph():
 		q = self.q
 
 		unnormalized_probs = []
+
 		for dst_nbr in sorted(G.neighbors(dst)):
 			if dst_nbr == src:
 				unnormalized_probs.append(G[dst][dst_nbr]['weight']/p)
@@ -103,6 +111,13 @@ class Graph():
 
 		return
 
+	def get_path_elements(self, nbrs, path_ele):
+		'''
+		Return the nodes that are of same class as that of the meta_path element
+		'''
+		G = self.G
+		return [i for i, n in enumerate(nbrs) if G.node[n]['tag'] == path_ele]
+
 
 def alias_setup(probs):
 	'''
@@ -136,14 +151,32 @@ def alias_setup(probs):
 
 	return J, q
 
-def alias_draw(J, q):
+
+
+def alias_draw(J, q, next_probable_nbrs):
 	'''
 	Draw sample from a non-uniform discrete distribution using alias sampling.
 	'''
+	# modify the probability distributions in this function
+	# upsample next_probable_nbrs
+	l = len(next_probable_nbrs)
+	for ele in next_probable_nbrs:
+		q[ele] += 1/l
+
+	q = normalise(q)
+	print 'length of q is :', len(q), 'items are:', q	
 	K = len(J)
 
 	kk = int(np.floor(np.random.rand()*K))
 	if np.random.rand() < q[kk]:
 	    return kk
 	else:
-	    return J[kk]
+	    if len(next_probable_nbrs) > 0:
+	    	return np.random.choice(next_probable_nbrs)
+	    else:
+	    	return J[kk]
+
+
+def normalise(ar):
+	s = np.sum(ar)
+	return [ele/float(s) for ele in ar]
