@@ -12,3 +12,4 @@ build
 .project
 .settings
 .idea
+graph/useful_sents.npy
