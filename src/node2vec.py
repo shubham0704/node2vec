@@ -164,7 +164,6 @@ def alias_draw(J, q, next_probable_nbrs):
 		q[ele] += 1/l
 
 	q = normalise(q)
-	#print 'length of q is :', len(q), 'items are:', q	
 	K = len(J)
 
 	kk = int(np.floor(np.random.rand()*K))
