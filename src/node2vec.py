@@ -10,7 +10,7 @@ class Graph():
 		self.p = p
 		self.q = q
 
-	def node2vec_walk(self, walk_length, start_node, meta_path):
+	def node2vec_walk(self, walk_length, start_node):
 		'''
 		Simulate a random walk starting from start node.
 		'''
@@ -19,29 +19,24 @@ class Graph():
 		alias_edges = self.alias_edges
 
 		walk = [start_node]
-
-		for path_ele in meta_path[1:]:
-			if len(walk) < walk_length:
-				cur = walk[-1]
-				cur_nbrs = sorted(G.neighbors(cur))
-				next_probable_nbrs = self.get_path_elements(cur_nbrs, path_ele)
-				
-				if len(cur_nbrs) > 0:
-					if len(walk) == 1:
-						walk.append(cur_nbrs[alias_draw(alias_nodes[cur][0], alias_nodes[cur][1], next_probable_nbrs)])
-					else:
-						prev = walk[-2]
-						next = cur_nbrs[alias_draw(alias_edges[(prev, cur)][0], 
-							alias_edges[(prev, cur)][1], next_probable_nbrs)]
-						walk.append(next)
+		while len(walk) < walk_length:
+			cur = walk[-1]
+			cur_nbrs = sorted(G.neighbors(cur))
+			if len(cur_nbrs) > 0:
+				if len(walk) == 1:
+					walk.append(cur_nbrs[alias_draw(alias_nodes[cur][0], alias_nodes[cur][1])])
+					
 				else:
-					break
+					prev = walk[-2]
+					next = cur_nbrs[alias_draw(alias_edges[(prev, cur)][0], 
+						alias_edges[(prev, cur)][1])]
+					walk.append(next)
 			else:
 				break
 
 		return walk
 
-	def simulate_walks(self, num_walks, walk_length, meta_paths):
+	def simulate_walks(self, num_walks, walk_length):
 		'''
 		Repeatedly simulate random walks from each node.
 		'''
@@ -52,10 +47,8 @@ class Graph():
 		for walk_iter in range(num_walks):
 			print str(walk_iter+1), '/', str(num_walks)
 			random.shuffle(nodes)
-			for meta_path in meta_paths:
-				for node in nodes:
-					# if node == meta_path[0]:
-					walks.append(self.node2vec_walk(walk_length=walk_length, start_node=node, meta_path=meta_path))
+			for node in nodes:
+				walks.append(self.node2vec_walk(walk_length=walk_length, start_node=node))
 
 		return walks
 
@@ -81,19 +74,28 @@ class Graph():
 
 		return alias_setup(normalized_probs)
 
-	def preprocess_transition_probs(self):
+	def preprocess_transition_probs(self, tag_transition):
 		'''
 		Preprocessing of transition probabilities for guiding the random walks.
 		'''
 		G = self.G
 		is_directed = self.is_directed
-
 		alias_nodes = {}
-		for node in G.nodes():
-			unnormalized_probs = [G[node][nbr]['weight'] for nbr in sorted(G.neighbors(node))]
+
+		for n in G.nodes():
+			unnormalized_probs = []
+			cur_tag = G.node[n]['tag']
+			for nbr in sorted(G.neighbors(n)):
+				nbr_tag = G.node[nbr]['tag']
+				try:
+					prob = tag_transition[cur_tag][nbr_tag]
+				except:
+					prob = G[n][nbr]['weight']
+				unnormalized_probs.append(prob)
+			
 			norm_const = sum(unnormalized_probs)
 			normalized_probs =  [float(u_prob)/norm_const for u_prob in unnormalized_probs]
-			alias_nodes[node] = alias_setup(normalized_probs)
+			alias_nodes[n] = alias_setup(normalized_probs)
 
 		alias_edges = {}
 		triads = {}
@@ -110,13 +112,6 @@ class Graph():
 		self.alias_edges = alias_edges
 
 		return
-
-	def get_path_elements(self, nbrs, path_ele):
-		'''
-		Return the nodes that are of same class as that of the meta_path element
-		'''
-		G = self.G
-		return [i for i, n in enumerate(nbrs) if G.node[n]['tag'] == path_ele]
 
 
 def alias_setup(probs):
@@ -153,27 +148,18 @@ def alias_setup(probs):
 
 
 
-def alias_draw(J, q, next_probable_nbrs):
+def alias_draw(J, q):
 	'''
 	Draw sample from a non-uniform discrete distribution using alias sampling.
 	'''
-	# modify the probability distributions in this function
-	# upsample next_probable_nbrs
-	l = len(next_probable_nbrs)
-	for ele in next_probable_nbrs:
-		q[ele] += 1/l
-
-	q = normalise(q)
+	
 	K = len(J)
 
 	kk = int(np.floor(np.random.rand()*K))
 	if np.random.rand() < q[kk]:
 	    return kk
 	else:
-	    if len(next_probable_nbrs) > 0:
-	    	return np.random.choice(next_probable_nbrs)
-	    else:
-	    	return J[kk]
+	    return J[kk]
 
 
 def normalise(ar):

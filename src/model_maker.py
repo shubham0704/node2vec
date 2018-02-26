@@ -22,6 +22,8 @@ def read_graph(args):
 	if args.graph:
 		G1 = nx.read_edgelist(nx.generate_edgelist(args.graph, data=True), nodetype=int, create_using=nx.DiGraph())
 		G = args.graph
+		#print G.nodes(), G1.nodes()
+		#print G.edges(), G1.edges()
 		for edge in G.edges():
 			G[edge[0]][edge[1]]['weight'] = 1
 		return G
@@ -57,8 +59,7 @@ def model_maker(args, unique_words):
 	'''
 	nx_G = read_graph(args)
 	G = node2vec.Graph(nx_G, args.directed, args.p, args.q)
-	G.preprocess_transition_probs()
-	walks = G.simulate_walks(args.num_walks, args.walk_length, args.meta_paths)
+	G.preprocess_transition_probs(args.tag_transition)
+	walks = G.simulate_walks(args.num_walks, args.walk_length)
 	model = learn_embeddings(walks, args, unique_words)
-
 	return model
